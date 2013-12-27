@@ -1,5 +1,8 @@
-# zxing-android
+#zxing-android
 This is a fork of Joe Simpson (@kennydude)'s work here: [https://github.com/kennydude/zxing-lib](https://github.com/kennydude/zxing-lib)
+
+##Why?
+To fix a number of open issues which haven't been resolved in the upstream project.
 
 ##Using the library
 Add the following dependency to your POM:  
