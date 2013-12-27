@@ -16,22 +16,22 @@
 
 package zxing.library;
 
-import com.google.zxing.BarcodeFormat;
-import com.google.zxing.DecodeHintType;
-import com.google.zxing.ResultPointCallback;
-import com.google.zxing.client.android.DecodeFormatManager;
-import com.google.zxing.client.android.PreferencesActivity;
+import java.util.Collection;
+import java.util.EnumMap;
+import java.util.EnumSet;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 
 import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Looper;
 import android.preference.PreferenceManager;
 
-import java.util.Collection;
-import java.util.EnumMap;
-import java.util.EnumSet;
-import java.util.Map;
-import java.util.concurrent.CountDownLatch;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.DecodeHintType;
+import com.google.zxing.ResultPointCallback;
+import com.google.zxing.client.android.DecodeFormatManager;
+import com.google.zxing.client.android.PreferencesActivity;
 
 /**
  * This thread does all the heavy lifting of decoding the images.

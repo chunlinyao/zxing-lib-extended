@@ -16,17 +16,17 @@
 
 package com.google.zxing.client.android.share;
 
-import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageManager;
-import android.os.AsyncTask;
-import android.widget.ArrayAdapter;
-import android.widget.ListAdapter;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+import android.os.AsyncTask;
+import android.widget.ArrayAdapter;
+import android.widget.ListAdapter;
 
 /**
  * Loads a list of packages installed on the device asynchronously.

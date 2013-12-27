@@ -16,6 +16,9 @@
 
 package com.google.zxing.client.android.share;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import android.app.ListActivity;
 import android.content.Intent;
 import android.provider.Browser;
@@ -24,9 +27,6 @@ import android.widget.ListView;
 
 import com.google.zxing.client.android.common.executor.AsyncTaskExecInterface;
 import com.google.zxing.client.android.common.executor.AsyncTaskExecManager;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public final class AppPickerActivity extends ListActivity {
 

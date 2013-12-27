@@ -1,12 +1,22 @@
+/*
+ * Copyright (C) 2008 ZXing authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package zxing.library;
 
 import java.io.IOException;
-
-import com.google.zxing.Result;
-import com.google.zxing.client.android.FinishListener;
-import com.google.zxing.client.android.R;
-import com.google.zxing.client.android.ViewfinderView;
-import com.google.zxing.client.android.camera.CameraManager;
 
 import android.app.AlertDialog;
 import android.graphics.Bitmap;
@@ -23,6 +33,12 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 
+import com.google.zxing.Result;
+import com.google.zxing.client.android.FinishListener;
+import com.google.zxing.client.android.R;
+import com.google.zxing.client.android.ViewfinderView;
+import com.google.zxing.client.android.camera.CameraManager;
+
 /**
  * A fragment that provides all of the UI/processing required to handle barcode
  * decoding
@@ -31,10 +47,8 @@ import android.view.WindowManager;
  * 
  */
 public class ZXingFragment extends Fragment implements SurfaceHolder.Callback {
-	public ZXingFragment() {
-	}
 
-	private static final String TAG = "zxing-frag";
+	private static final String TAG = "ZXingFragment"; //$NON-NLS-1$
 	boolean hasSurface;
 	private CameraManager cameraManager;
 	private ViewfinderView viewfinderView;
@@ -42,8 +56,7 @@ public class ZXingFragment extends Fragment implements SurfaceHolder.Callback {
 	private Result savedResultToShow;
 
 	@Override
-	public View onCreateView(LayoutInflater inflater, ViewGroup container,
-			Bundle savedInstanceState) {
+	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 		return inflater.inflate(R.layout.fragment_capture, container, false);
 	}
 
@@ -67,12 +80,10 @@ public class ZXingFragment extends Fragment implements SurfaceHolder.Callback {
 		cameraManager = new CameraManager(getActivity().getApplication());
 		cameraManager.setManualFramingRect(getView().getWidth(), getView().getHeight());
 
-		viewfinderView = (ViewfinderView) getView().findViewById(
-				R.id.viewfinder_view);
+		viewfinderView = (ViewfinderView) getView().findViewById(R.id.viewfinder_view);
 		viewfinderView.setCameraManager(cameraManager);
 
-		SurfaceView surfaceView = (SurfaceView) getView().findViewById(
-				R.id.preview_view);
+		SurfaceView surfaceView = (SurfaceView) getView().findViewById(R.id.preview_view);
 		SurfaceHolder surfaceHolder = surfaceView.getHolder();
 		if (hasSurface) {
 			// The activity was paused but not stopped, so the surface still
@@ -97,8 +108,7 @@ public class ZXingFragment extends Fragment implements SurfaceHolder.Callback {
 		// ambientLightManager.stop();
 		cameraManager.closeDriver();
 		if (!hasSurface) {
-			SurfaceView surfaceView = (SurfaceView) getView().findViewById(
-					R.id.preview_view);
+			SurfaceView surfaceView = (SurfaceView) getView().findViewById(R.id.preview_view);
 			SurfaceHolder surfaceHolder = surfaceView.getHolder();
 			surfaceHolder.removeCallback(this);
 		}
@@ -107,11 +117,10 @@ public class ZXingFragment extends Fragment implements SurfaceHolder.Callback {
 
 	private void initCamera(SurfaceHolder surfaceHolder) {
 		if (surfaceHolder == null) {
-			throw new IllegalStateException("No SurfaceHolder provided");
+			throw new IllegalStateException("No SurfaceHolder provided"); //$NON-NLS-1$
 		}
 		if (cameraManager.isOpen()) {
-			Log.w(TAG,
-					"initCamera() while already open -- late SurfaceView callback?");
+			Log.w(TAG, "initCamera() while already open -- late SurfaceView callback?"); //$NON-NLS-1$
 			return;
 		}
 		try {
@@ -129,7 +138,7 @@ public class ZXingFragment extends Fragment implements SurfaceHolder.Callback {
 		} catch (RuntimeException e) {
 			// Barcode Scanner has seen crashes in the wild of this variety:
 			// java.?lang.?RuntimeException: Fail to connect to camera service
-			Log.w(TAG, "Unexpected error initializing camera", e);
+			Log.w(TAG, "Unexpected error initializing camera", e); //$NON-NLS-1$
 			displayFrameworkBugMessageAndExit();
 		}
 	}
@@ -143,8 +152,7 @@ public class ZXingFragment extends Fragment implements SurfaceHolder.Callback {
 				savedResultToShow = result;
 			}
 			if (savedResultToShow != null) {
-				Message message = Message.obtain(handler,
-						R.id.decode_succeeded, savedResultToShow);
+				Message message = Message.obtain(handler, R.id.decode_succeeded, savedResultToShow);
 				handler.sendMessage(message);
 			}
 			savedResultToShow = null;
@@ -155,8 +163,7 @@ public class ZXingFragment extends Fragment implements SurfaceHolder.Callback {
 		AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
 		builder.setTitle(getString(R.string.app_name));
 		builder.setMessage(getString(R.string.msg_camera_framework_bug));
-		builder.setPositiveButton(R.string.button_ok, new FinishListener(
-				getActivity()));
+		builder.setPositiveButton(R.string.button_ok, new FinishListener(getActivity()));
 		builder.setOnCancelListener(new FinishListener(getActivity()));
 		builder.show();
 	}
@@ -168,10 +175,9 @@ public class ZXingFragment extends Fragment implements SurfaceHolder.Callback {
 
 	@Override
 	public void surfaceCreated(SurfaceHolder holder) {
-		Log.d(TAG, "surface created");
+		Log.d(TAG, "surface created"); //$NON-NLS-1$
 		if (holder == null) {
-			Log.e(TAG,
-					"*** WARNING *** surfaceCreated() gave us a null surface!");
+			Log.e(TAG, "*** WARNING *** surfaceCreated() gave us a null surface!"); //$NON-NLS-1$
 		}
 		if (!hasSurface) {
 			hasSurface = true;
@@ -211,12 +217,12 @@ public class ZXingFragment extends Fragment implements SurfaceHolder.Callback {
 			this.dc.handleBarcode(obj, barcode, scaleFactor);
 		}
 	}
-	
-	public void restartScanning(){
+
+	public void restartScanning() {
 		handler.sendEmptyMessage(R.id.restart_preview);
 	}
-	
-	public void restartScanningIn(int millis){
+
+	public void restartScanningIn(int millis) {
 		handler.sendEmptyMessageDelayed(R.id.restart_preview, millis);
 	}
 
