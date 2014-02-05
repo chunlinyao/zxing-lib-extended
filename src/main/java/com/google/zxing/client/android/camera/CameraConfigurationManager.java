@@ -161,16 +161,6 @@ final class CameraConfigurationManager {
     if (flashMode != null) {
       parameters.setFlashMode(flashMode);
     }
-
-    /*
-    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-    if (!prefs.getBoolean(PreferencesActivity.KEY_DISABLE_EXPOSURE, false)) {
-      if (!safeMode) {
-        ExposureInterface exposure = new ExposureManager().build();
-        exposure.setExposure(parameters, newSetting);
-      }
-    }
-     */
   }
 
   private Point findBestPreviewSizeValue(Camera.Parameters parameters, Point screenResolution) {
