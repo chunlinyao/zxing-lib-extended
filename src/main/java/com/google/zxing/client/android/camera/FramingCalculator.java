@@ -15,7 +15,6 @@ class FramingCalculator {
 
   private final Resolution screenResolution;
   private final Resolution cameraResolution;
-  private final int rotation;
 
   FramingCalculator(Resolution screenResolution, Resolution cameraResolution, int rotation) {
     if (screenResolution != null) {
@@ -28,7 +27,6 @@ class FramingCalculator {
       this.screenResolution = null;
     }
     this.cameraResolution = cameraResolution;
-    this.rotation = rotation;
   }
 
   /**
