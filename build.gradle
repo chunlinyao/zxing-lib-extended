@@ -1,19 +1,24 @@
 buildscript {
   repositories {
     mavenCentral()
+
+    maven {
+      url "https://oss.sonatype.org/content/repositories/snapshots/"
+    }
   }
 
   dependencies {
     classpath 'com.android.tools.build:gradle:0.8.+'
+    classpath 'com.squareup.gradle:gradle-android-test-plugin:0.9.1-SNAPSHOT'
   }
 }
 
-apply plugin: 'android-library'
-apply plugin: 'maven'
+group = 'com.skookum'
+version = '1.0.0'
 
-repositories {
-  mavenCentral()
-}
+apply plugin: 'android-library'
+apply plugin: 'android-test'
+apply plugin: 'maven'
 
 task coreLibJar(type: Jar) {
   from fileTree(dir: 'build/libs').matching { include '*.aar' }
@@ -22,6 +27,20 @@ task coreLibJar(type: Jar) {
 artifacts {
   archives coreLibJar
 }
+
+repositories {
+  mavenCentral()
+  maven {
+    url 'https://oss.sonatype.org/content/repositories/snapshots/'
+  }
+}
+
+uploadArchives {
+  repositories {
+    mavenLocal()
+  }
+}
+
 
 android {
   compileSdkVersion 19
@@ -37,5 +56,24 @@ android {
     compile 'com.android.support:support-v4:19.+'
   }
 
+  sourceSets {
+    instrumentTest.setRoot('src/test')
+  }
+
 }
+
+dependencies {
+  testCompile 'junit:junit-dep:4.10'
+  testCompile 'org.robolectric:robolectric:2.3-SNAPSHOT'
+  testCompile 'com.squareup:fest-android:1.0.+'
+  testCompile 'org.hamcrest:hamcrest-library:1.3'
+  testCompile 'org.mockito:mockito-all:1.9.5'
+
+  instrumentTestCompile 'junit:junit-dep:4.10'
+  instrumentTestCompile 'org.robolectric:robolectric:2.3-SNAPSHOT'
+  instrumentTestCompile 'com.squareup:fest-android:1.0.+'
+  instrumentTestCompile 'org.hamcrest:hamcrest-library:1.3'
+  instrumentTestCompile 'org.mockito:mockito-all:1.9.5'
+}
+
 

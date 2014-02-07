@@ -24,7 +24,6 @@ import java.util.List;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.graphics.Point;
 import android.hardware.Camera;
 import android.preference.PreferenceManager;
 import android.util.Log;
@@ -37,7 +36,7 @@ import com.google.zxing.client.android.PreferencesActivity;
  * A class which deals with reading, parsing, and setting the camera parameters which are used to
  * configure the camera hardware.
  */
-final class CameraConfigurationManager {
+public class CameraConfigurationManager {
 
   private static final String TAG = "CameraConfiguration";
 
@@ -48,10 +47,10 @@ final class CameraConfigurationManager {
   private static final int MAX_PREVIEW_PIXELS = 1280 * 720;
 
   private final Context context;
-  private Point screenResolution;
-  private Point cameraResolution;
+  private Resolution screenResolution;
+  private Resolution cameraResolution;
 
-  CameraConfigurationManager(Context context) {
+  public CameraConfigurationManager(Context context) {
     this.context = context;
   }
 
@@ -72,7 +71,7 @@ final class CameraConfigurationManager {
       width = height;
       height = temp;
     }
-    screenResolution = new Point(width, height);
+    screenResolution = new Resolution(width, height);
     Log.i(TAG, "Screen resolution: " + screenResolution);
     cameraResolution = findBestPreviewSizeValue(parameters, screenResolution);
     Log.i(TAG, "Camera resolution: " + cameraResolution);
@@ -118,15 +117,15 @@ final class CameraConfigurationManager {
       parameters.setFocusMode(focusMode);
     }
 
-    parameters.setPreviewSize(cameraResolution.x, cameraResolution.y);
+    parameters.setPreviewSize(cameraResolution.getX(), cameraResolution.getY());
     camera.setParameters(parameters);
   }
 
-  Point getCameraResolution() {
+  Resolution getCameraResolution() {
     return cameraResolution;
   }
 
-  Point getScreenResolution() {
+  Resolution getScreenResolution() {
     return screenResolution;
   }
 
@@ -163,13 +162,13 @@ final class CameraConfigurationManager {
     }
   }
 
-  private Point findBestPreviewSizeValue(Camera.Parameters parameters, Point screenResolution) {
+  private Resolution findBestPreviewSizeValue(Camera.Parameters parameters, Resolution screenResolution) {
 
     List<Camera.Size> rawSupportedSizes = parameters.getSupportedPreviewSizes();
     if (rawSupportedSizes == null) {
       Log.w(TAG, "Device returned no supported preview sizes; using default");
       Camera.Size defaultSize = parameters.getPreviewSize();
-      return new Point(defaultSize.width, defaultSize.height);
+      return new Resolution(defaultSize.width, defaultSize.height);
     }
 
     // Sort by size, descending
@@ -198,8 +197,8 @@ final class CameraConfigurationManager {
       Log.i(TAG, "Supported preview sizes: " + previewSizesString);
     }
 
-    Point bestSize = null;
-    float screenAspectRatio = (float) screenResolution.x / (float) screenResolution.y;
+    Resolution bestSize = null;
+    float screenAspectRatio = (float) screenResolution.getY() / (float) screenResolution.getY();
 
     float diff = Float.POSITIVE_INFINITY;
     for (Camera.Size supportedPreviewSize : supportedPreviewSizes) {
@@ -212,22 +211,22 @@ final class CameraConfigurationManager {
       boolean isCandidatePortrait = realWidth < realHeight;
       int maybeFlippedWidth = isCandidatePortrait ? realHeight : realWidth;
       int maybeFlippedHeight = isCandidatePortrait ? realWidth : realHeight;
-      if (maybeFlippedWidth == screenResolution.x && maybeFlippedHeight == screenResolution.y) {
-        Point exactPoint = new Point(realWidth, realHeight);
+      if (maybeFlippedWidth == screenResolution.getX() && maybeFlippedHeight == screenResolution.getY()) {
+        Resolution exactPoint = new Resolution(realWidth, realHeight);
         Log.i(TAG, "Found preview size exactly matching screen size: " + exactPoint);
         return exactPoint;
       }
       float aspectRatio = (float) maybeFlippedWidth / (float) maybeFlippedHeight;
       float newDiff = Math.abs(aspectRatio - screenAspectRatio);
       if (newDiff < diff) {
-        bestSize = new Point(realWidth, realHeight);
+        bestSize = new Resolution(realWidth, realHeight);
         diff = newDiff;
       }
     }
 
     if (bestSize == null) {
       Camera.Size defaultSize = parameters.getPreviewSize();
-      bestSize = new Point(defaultSize.width, defaultSize.height);
+      bestSize = new Resolution(defaultSize.width, defaultSize.height);
       Log.i(TAG, "No suitable preview sizes, using default: " + bestSize);
     }
 

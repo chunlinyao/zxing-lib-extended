@@ -16,18 +16,17 @@
 
 package com.google.zxing.client.android.camera;
 
-import java.io.IOException;
-
 import android.content.Context;
-import android.graphics.Point;
 import android.graphics.Rect;
 import android.hardware.Camera;
 import android.os.Handler;
 import android.util.Log;
+import android.view.Surface;
 import android.view.SurfaceHolder;
 
 import com.google.zxing.PlanarYUVLuminanceSource;
-import com.google.zxing.client.android.camera.open.OpenCameraManager;
+
+import java.io.IOException;
 
 /**
  * This object wraps the Camera service object and expects to be the only one talking to it. The
@@ -40,14 +39,14 @@ public final class CameraManager {
 
   private static final String TAG = CameraManager.class.getSimpleName();
 
-  private static final int MIN_FRAME_WIDTH = 240;
-  private static final int MIN_FRAME_HEIGHT = 240;
-  private static final int MAX_FRAME_WIDTH = 600;
-  private static final int MAX_FRAME_HEIGHT = 400;
-
   private final Context context;
   private final CameraConfigurationManager configManager;
+
   private Camera camera;
+  private Integer cameraIndex;
+
+  private Integer cameraRotationInDegrees;
+
   private AutoFocusManager autoFocusManager;
   private Rect framingRect;
   private Rect framingRectInPreview;
@@ -61,9 +60,9 @@ public final class CameraManager {
    */
   private final PreviewCallback previewCallback;
 
-  public CameraManager(Context context) {
+  public CameraManager(Context context, CameraConfigurationManager configManager) {
     this.context = context;
-    this.configManager = new CameraConfigurationManager(context);
+    this.configManager = configManager;
     previewCallback = new PreviewCallback(configManager);
   }
 
@@ -76,13 +75,15 @@ public final class CameraManager {
   public synchronized void openDriver(SurfaceHolder holder) throws IOException {
     Camera theCamera = camera;
     if (theCamera == null) {
-      theCamera = new OpenCameraManager().build().open();
+      theCamera = open();
       if (theCamera == null) {
         throw new IOException();
       }
       camera = theCamera;
+      updateCameraOrientation();
     }
     theCamera.setPreviewDisplay(holder);
+    calculateRotationInDegrees(cameraRotationInDegrees);
 
     if (!initialized) {
       initialized = true;
@@ -117,6 +118,39 @@ public final class CameraManager {
     }
 
   }
+
+  /**
+   * Opens a rear-facing camera with {@link Camera#open(int)}, if one exists, or opens camera 0.
+   */
+  private Camera open() {
+
+    int numCameras = Camera.getNumberOfCameras();
+    if (numCameras == 0) {
+      Log.w(TAG, "No cameras!");
+      return null;
+    }
+
+    int index = 0;
+    while (index < numCameras) {
+      Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
+      Camera.getCameraInfo(index, cameraInfo);
+      if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_BACK) {
+        break;
+      }
+      index++;
+    }
+
+    if (index < numCameras) {
+      Log.i(TAG, "Opening camera #" + index);
+      cameraIndex = index;
+    } else {
+      Log.i(TAG, "No camera facing back; returning camera #0");
+      cameraIndex = 0;
+    }
+
+    return Camera.open(cameraIndex);
+  }
+
 
   public synchronized boolean isOpen() {
     return camera != null;
@@ -163,9 +197,6 @@ public final class CameraManager {
     }
   }
 
-  /**
-   * Convenience method for {@link com.google.zxing.client.android.CaptureActivity}
-   */
   public synchronized void setTorch(boolean newSetting) {
     if (camera != null) {
       if (autoFocusManager != null) {
@@ -202,31 +233,11 @@ public final class CameraManager {
    * @return The rectangle to draw on screen in window coordinates.
    */
   public synchronized Rect getFramingRect() {
-    if (framingRect == null) {
-      if (camera == null) {
-        return null;
-      }
-      Point screenResolution = configManager.getScreenResolution();
-      if (screenResolution == null) {
-        // Called early, before init even finished
-        return null;
-      }
-      int width = screenResolution.x * 3 / 4;
-      if (width < MIN_FRAME_WIDTH) {
-        width = MIN_FRAME_WIDTH;
-      } else if (width > MAX_FRAME_WIDTH) {
-        width = MAX_FRAME_WIDTH;
-      }
-      int height = screenResolution.y * 3 / 4;
-      if (height < MIN_FRAME_HEIGHT) {
-        height = MIN_FRAME_HEIGHT;
-      } else if (height > MAX_FRAME_HEIGHT) {
-        height = MAX_FRAME_HEIGHT;
-      }
-      int leftOffset = (screenResolution.x - width) / 2;
-      int topOffset = (screenResolution.y - height) / 2;
-      framingRect = new Rect(leftOffset, topOffset, leftOffset + width, topOffset + height);
-      Log.d(TAG, "Calculated framing rect: " + framingRect);
+    if (framingRect == null && camera != null) {
+      framingRect = new FramingCalculator(
+          configManager.getScreenResolution(),
+          configManager.getCameraResolution(),
+          cameraRotationInDegrees).getFramingRect();
     }
     return framingRect;
   }
@@ -236,23 +247,11 @@ public final class CameraManager {
    * not UI / screen.
    */
   public synchronized Rect getFramingRectInPreview() {
-    if (framingRectInPreview == null) {
-      Rect framingRect = getFramingRect();
-      if (framingRect == null) {
-        return null;
-      }
-      Rect rect = new Rect(framingRect);
-      Point cameraResolution = configManager.getCameraResolution();
-      Point screenResolution = configManager.getScreenResolution();
-      if (cameraResolution == null || screenResolution == null) {
-        // Called early, before init even finished
-        return null;
-      }
-      rect.left = rect.left * cameraResolution.x / screenResolution.x;
-      rect.right = rect.right * cameraResolution.x / screenResolution.x;
-      rect.top = rect.top * cameraResolution.y / screenResolution.y;
-      rect.bottom = rect.bottom * cameraResolution.y / screenResolution.y;
-      framingRectInPreview = rect;
+    if (framingRectInPreview == null && camera != null) {
+      framingRectInPreview = new FramingCalculator(
+          configManager.getScreenResolution(),
+          configManager.getCameraResolution(),
+          cameraRotationInDegrees).getFramingRectInPreview();
     }
     return framingRectInPreview;
   }
@@ -261,20 +260,20 @@ public final class CameraManager {
    * Allows third party apps to specify the scanning rectangle dimensions, rather than determine
    * them automatically based on screen resolution.
    *
-   * @param width The width in pixels to scan.
+   * @param width  The width in pixels to scan.
    * @param height The height in pixels to scan.
    */
   public synchronized void setManualFramingRect(int width, int height) {
     if (initialized) {
-      Point screenResolution = configManager.getScreenResolution();
-      if (width > screenResolution.x) {
-        width = screenResolution.x;
+      Resolution screenResolution = configManager.getScreenResolution();
+      if (width > screenResolution.getX()) {
+        width = screenResolution.getX();
       }
-      if (height > screenResolution.y) {
-        height = screenResolution.y;
+      if (height > screenResolution.getY()) {
+        height = screenResolution.getY();
       }
-      int leftOffset = (screenResolution.x - width) / 2;
-      int topOffset = (screenResolution.y - height) / 2;
+      int leftOffset = (screenResolution.getX() - width) / 2;
+      int topOffset = (screenResolution.getY() - height) / 2;
       framingRect = new Rect(leftOffset, topOffset, leftOffset + width, topOffset + height);
       Log.d(TAG, "Calculated manual framing rect: " + framingRect);
       framingRectInPreview = null;
@@ -288,8 +287,8 @@ public final class CameraManager {
    * A factory method to build the appropriate LuminanceSource object based on the format
    * of the preview buffers, as described by Camera.Parameters.
    *
-   * @param data A preview frame.
-   * @param width The width of the image.
+   * @param data   A preview frame.
+   * @param width  The width of the image.
    * @param height The height of the image.
    * @return A PlanarYUVLuminanceSource instance.
    */
@@ -300,7 +299,43 @@ public final class CameraManager {
     }
     // Go ahead and assume it's YUV rather than die.
     return new PlanarYUVLuminanceSource(data, width, height, rect.left, rect.top,
-                                        rect.width(), rect.height(), false);
+        rect.width(), rect.height(), false);
   }
 
+
+  public void setCameraDisplayOrientation(int rotation) {
+    cameraRotationInDegrees = calculateRotationInDegrees(rotation);
+  }
+
+  private int calculateRotationInDegrees(int rotation) {
+    int degrees = 0;
+    switch (rotation) {
+      case Surface.ROTATION_0:
+        degrees = 0;
+        break;
+      case Surface.ROTATION_90:
+        degrees = 90;
+        break;
+      case Surface.ROTATION_180:
+        degrees = 180;
+        break;
+      case Surface.ROTATION_270:
+        degrees = 270;
+        break;
+    }
+    return degrees;
+  }
+
+  private void updateCameraOrientation(){
+    android.hardware.Camera.CameraInfo info =new android.hardware.Camera.CameraInfo();
+    android.hardware.Camera.getCameraInfo(cameraIndex, info);
+    int result;
+    if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+      result = (info.orientation + cameraRotationInDegrees) % 360;
+      result = (360 - result) % 360;  // compensate the mirror
+    } else {  // back-facing
+      result = (info.orientation - cameraRotationInDegrees+ 360) % 360;
+    }
+    camera.setDisplayOrientation(result);
+  }
 }
