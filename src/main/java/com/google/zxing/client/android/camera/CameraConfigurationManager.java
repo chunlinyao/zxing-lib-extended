@@ -16,21 +16,17 @@
 
 package com.google.zxing.client.android.camera;
 
+import android.content.Context;
+import android.hardware.Camera;
+import android.util.Log;
+import android.view.Display;
+import android.view.WindowManager;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-
-import android.content.Context;
-import android.content.SharedPreferences;
-import android.hardware.Camera;
-import android.preference.PreferenceManager;
-import android.util.Log;
-import android.view.Display;
-import android.view.WindowManager;
-
-import com.google.zxing.client.android.PreferencesActivity;
 
 /**
  * A class which deals with reading, parsing, and setting the camera parameters which are used to
@@ -91,27 +87,23 @@ public class CameraConfigurationManager {
       Log.w(TAG, "In camera config safe mode -- most settings will not be honored");
     }
 
-    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-
-    initializeTorch(parameters, prefs, safeMode);
+    initializeTorch(parameters, safeMode);
 
     String focusMode = null;
-    if (prefs.getBoolean(PreferencesActivity.KEY_AUTO_FOCUS, true)) {
-      if (safeMode || prefs.getBoolean(PreferencesActivity.KEY_DISABLE_CONTINUOUS_FOCUS, false)) {
-        focusMode = findSettableValue(parameters.getSupportedFocusModes(),
-                                      Camera.Parameters.FOCUS_MODE_AUTO);
-      } else {
-        focusMode = findSettableValue(parameters.getSupportedFocusModes(),
-                                      "continuous-picture", // Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE in 4.0+
-                                      "continuous-video",   // Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO in 4.0+
-                                      Camera.Parameters.FOCUS_MODE_AUTO);
-      }
+    if (safeMode) {
+      focusMode = findSettableValue(parameters.getSupportedFocusModes(),
+          Camera.Parameters.FOCUS_MODE_AUTO);
+    } else {
+      focusMode = findSettableValue(parameters.getSupportedFocusModes(),
+          "continuous-picture", // Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE in 4.0+
+          "continuous-video",   // Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO in 4.0+
+          Camera.Parameters.FOCUS_MODE_AUTO);
     }
     // Maybe selected auto-focus but not available, so fall through here:
     if (!safeMode && focusMode == null) {
       focusMode = findSettableValue(parameters.getSupportedFocusModes(),
-                                    Camera.Parameters.FOCUS_MODE_MACRO,
-                                    "edof"); // Camera.Parameters.FOCUS_MODE_EDOF in 2.2+
+          Camera.Parameters.FOCUS_MODE_MACRO,
+          "edof"); // Camera.Parameters.FOCUS_MODE_EDOF in 2.2+
     }
     if (focusMode != null) {
       parameters.setFocusMode(focusMode);
@@ -131,31 +123,23 @@ public class CameraConfigurationManager {
 
   void setTorch(Camera camera, boolean newSetting) {
     Camera.Parameters parameters = camera.getParameters();
-    doSetTorch(parameters, newSetting, false);
+    doSetTorch(parameters, newSetting);
     camera.setParameters(parameters);
-    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-    boolean currentSetting = prefs.getBoolean(PreferencesActivity.KEY_FRONT_LIGHT, false);
-    if (currentSetting != newSetting) {
-      SharedPreferences.Editor editor = prefs.edit();
-      editor.putBoolean(PreferencesActivity.KEY_FRONT_LIGHT, newSetting);
-      editor.commit();
-    }
   }
 
-  private void initializeTorch(Camera.Parameters parameters, SharedPreferences prefs, boolean safeMode) {
-    boolean currentSetting = prefs.getBoolean(PreferencesActivity.KEY_FRONT_LIGHT, false);
-    doSetTorch(parameters, currentSetting, safeMode);
+  private void initializeTorch(Camera.Parameters parameters, boolean safeMode) {
+    doSetTorch(parameters, safeMode);
   }
 
-  private void doSetTorch(Camera.Parameters parameters, boolean newSetting, boolean safeMode) {
+  private void doSetTorch(Camera.Parameters parameters, boolean on) {
     String flashMode;
-    if (newSetting) {
+    if (on) {
       flashMode = findSettableValue(parameters.getSupportedFlashModes(),
-                                    Camera.Parameters.FLASH_MODE_TORCH,
-                                    Camera.Parameters.FLASH_MODE_ON);
+          Camera.Parameters.FLASH_MODE_TORCH,
+          Camera.Parameters.FLASH_MODE_ON);
     } else {
       flashMode = findSettableValue(parameters.getSupportedFlashModes(),
-                                    Camera.Parameters.FLASH_MODE_OFF);
+          Camera.Parameters.FLASH_MODE_OFF);
     }
     if (flashMode != null) {
       parameters.setFlashMode(flashMode);
