@@ -298,8 +298,36 @@ public final class CameraManager {
       return null;
     }
     // Go ahead and assume it's YUV rather than die.
-    return new PlanarYUVLuminanceSource(data, width, height, rect.left, rect.top,
-        rect.width(), rect.height(), false);
+    if (this.cameraRotationInDegrees % 180 == 0) {
+      byte[] rotateData = rotateYUV420Degree90(data, width, height);
+      return new PlanarYUVLuminanceSource(rotateData, height, width, rect.top, rect.left, rect.height(), rect.width(), false);
+    } else {
+      return new PlanarYUVLuminanceSource(data, width, height, rect.left, rect.top, rect.width(), rect.height(), false);
+    }
+  }
+
+
+  private byte[] rotateYUV420Degree90(byte[] data, int imageWidth, int imageHeight) {
+    byte[] yuv = new byte[imageWidth * imageHeight * 3 / 2];
+    // Rotate the Y luma
+    int i = 0;
+    for (int x = 0; x < imageWidth; x++) {
+      for (int y = imageHeight - 1; y >= 0; y--) {
+        yuv[i] = data[y * imageWidth + x];
+        i++;
+      }
+    }
+    // Rotate the U and V color components
+    i = imageWidth * imageHeight * 3 / 2 - 1;
+    for (int x = imageWidth - 1; x > 0; x = x - 2) {
+      for (int y = 0; y < imageHeight / 2; y++) {
+        yuv[i] = data[(imageWidth * imageHeight) + (y * imageWidth) + x];
+        i--;
+        yuv[i] = data[(imageWidth * imageHeight) + (y * imageWidth) + (x - 1)];
+        i--;
+      }
+    }
+    return yuv;
   }
 
 
@@ -326,15 +354,15 @@ public final class CameraManager {
     return degrees;
   }
 
-  private void updateCameraOrientation(){
-    android.hardware.Camera.CameraInfo info =new android.hardware.Camera.CameraInfo();
+  private void updateCameraOrientation() {
+    android.hardware.Camera.CameraInfo info = new android.hardware.Camera.CameraInfo();
     android.hardware.Camera.getCameraInfo(cameraIndex, info);
     int result;
     if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
       result = (info.orientation + cameraRotationInDegrees) % 360;
       result = (360 - result) % 360;  // compensate the mirror
     } else {  // back-facing
-      result = (info.orientation - cameraRotationInDegrees+ 360) % 360;
+      result = (info.orientation - cameraRotationInDegrees + 360) % 360;
     }
     camera.setDisplayOrientation(result);
   }

@@ -29,7 +29,7 @@ import android.preference.PreferenceManager;
 import android.util.Log;
 
 /**
- * Manages beeps and vibrations for {@link CaptureActivity}.
+ * Manages beeps and vibrations.
  */
 final class BeepManager {
 
