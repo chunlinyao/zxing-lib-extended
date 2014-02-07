@@ -23,16 +23,6 @@ artifacts {
   archives coreLibJar
 }
 
-uploadArchives {
-  repositories {
-    mavenDeployer {
-      repository(url: "file:~/.m2/repository/")
-      pom.groupId = 'com.skookum'
-      pom.artifactId = 'zxing-android'
-      pom.version = '1.0.0'
-    }
-  }
-}
 android {
   compileSdkVersion 19
   buildToolsVersion "19.0.1"
