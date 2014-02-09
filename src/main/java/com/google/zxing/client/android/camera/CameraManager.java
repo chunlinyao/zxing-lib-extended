@@ -297,10 +297,16 @@ public final class CameraManager {
     if (rect == null) {
       return null;
     }
+    Log.i(TAG, "original : resolution:(" + width + "," + height + ") rect:(" + rect.left + "," + rect.top + ") (" + rect.width() + "," + rect.height() + ")");
     // Go ahead and assume it's YUV rather than die.
     if (this.cameraRotationInDegrees % 180 == 0) {
       byte[] rotateData = rotateYUV420Degree90(data, width, height);
-      return new PlanarYUVLuminanceSource(rotateData, height, width, rect.top, rect.left, rect.height(), rect.width(), false);
+
+      Rect rotateRect = new FramingCalculator(
+          configManager.getScreenResolution(),
+          configManager.getCameraResolution(),
+          cameraRotationInDegrees).getFramingRectInPreview();
+      return new PlanarYUVLuminanceSource(rotateData, height, width, rotateRect.left, rotateRect.top, rotateRect.width(), rotateRect.height(), false);
     } else {
       return new PlanarYUVLuminanceSource(data, width, height, rect.left, rect.top, rect.width(), rect.height(), false);
     }

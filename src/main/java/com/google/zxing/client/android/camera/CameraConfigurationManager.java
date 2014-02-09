@@ -182,28 +182,27 @@ public class CameraConfigurationManager {
     }
 
     Resolution bestSize = null;
-    float screenAspectRatio = (float) screenResolution.getY() / (float) screenResolution.getY();
+    float screenAspectRatio = screenResolution.getRatio();
 
     float diff = Float.POSITIVE_INFINITY;
     for (Camera.Size supportedPreviewSize : supportedPreviewSizes) {
-      int realWidth = supportedPreviewSize.width;
-      int realHeight = supportedPreviewSize.height;
-      int pixels = realWidth * realHeight;
+      Resolution originalCameraResolution = new Resolution(supportedPreviewSize.width, supportedPreviewSize.height);
+      Resolution cameraResolution;
+      int pixels = originalCameraResolution.getPixels();
       if (pixels < MIN_PREVIEW_PIXELS || pixels > MAX_PREVIEW_PIXELS) {
         continue;
       }
-      boolean isCandidatePortrait = realWidth < realHeight;
-      int maybeFlippedWidth = isCandidatePortrait ? realHeight : realWidth;
-      int maybeFlippedHeight = isCandidatePortrait ? realWidth : realHeight;
-      if (maybeFlippedWidth == screenResolution.getX() && maybeFlippedHeight == screenResolution.getY()) {
-        Resolution exactPoint = new Resolution(realWidth, realHeight);
-        Log.i(TAG, "Found preview size exactly matching screen size: " + exactPoint);
-        return exactPoint;
+      if (originalCameraResolution.isPortrait()) {
+        cameraResolution = originalCameraResolution.rotate();
+      } else {
+        cameraResolution = originalCameraResolution;
       }
-      float aspectRatio = (float) maybeFlippedWidth / (float) maybeFlippedHeight;
+      float aspectRatio = cameraResolution.getRatio();
       float newDiff = Math.abs(aspectRatio - screenAspectRatio);
+      Log.i(TAG, "aspect Ratio:" + aspectRatio + " screenAspectRation:" + screenAspectRatio);
+      Log.i(TAG, cameraResolution + " has diff " + newDiff);
       if (newDiff < diff) {
-        bestSize = new Resolution(realWidth, realHeight);
+        bestSize = originalCameraResolution;
         diff = newDiff;
       }
     }

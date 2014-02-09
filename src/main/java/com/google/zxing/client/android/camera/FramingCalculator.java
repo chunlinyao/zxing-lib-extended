@@ -26,7 +26,16 @@ class FramingCalculator {
     } else {
       this.screenResolution = null;
     }
-    this.cameraResolution = cameraResolution;
+    if (cameraResolution != null) {
+      if (rotation % 180 == 0) {
+        this.cameraResolution= cameraResolution.rotate();
+      } else {
+        this.cameraResolution = cameraResolution;
+      }
+    } else {
+      this.cameraResolution= null;
+    }
+
   }
 
   /**
@@ -41,21 +50,25 @@ class FramingCalculator {
       // Called early, before init even finished
       return null;
     }
+    return calculateFrameRect(screenResolution);
+  }
 
-    int width = screenResolution.getX() * 3 / 4;
+  public static Rect calculateFrameRect(Resolution resolution) {
+
+    int width = resolution.getX() * 3 / 4;
     if (width < MIN_FRAME_WIDTH) {
       width = MIN_FRAME_WIDTH;
     } else if (width > MAX_FRAME_WIDTH) {
       width = MAX_FRAME_WIDTH;
     }
-    int height = screenResolution.getY() * 3 / 4;
+    int height = resolution.getY() * 3 / 4;
     if (height < MIN_FRAME_HEIGHT) {
       height = MIN_FRAME_HEIGHT;
     } else if (height > MAX_FRAME_HEIGHT) {
       height = MAX_FRAME_HEIGHT;
     }
-    int leftOffset = (screenResolution.getX() - width) / 2;
-    int topOffset = (screenResolution.getY() - height) / 2;
+    int leftOffset = (resolution.getX() - width) / 2;
+    int topOffset = (resolution.getY() - height) / 2;
     Rect framingRect = new Rect(leftOffset, topOffset, leftOffset + width, topOffset + height);
     Log.d(TAG, "Calculated framing rect: " + framingRect);
     return framingRect;

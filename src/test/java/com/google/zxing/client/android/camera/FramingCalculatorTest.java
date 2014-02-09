@@ -42,4 +42,19 @@ public class FramingCalculatorTest {
   }
 
 
+  @Test
+  public void test_framing_rectangle_preview_portrait_mode() throws IOException {
+    FramingCalculator framingCalculator = new FramingCalculator(new Resolution(1280, 800), new Resolution(480, 368), 0);
+    Rect framingRect = framingCalculator.getFramingRectInPreview();
+    assertThat(framingRect, is(not(nullValue())));
+//    assertThat(framingRect.left, is(37));
+    assertThat(framingRect.left, is(46));
+    assertThat(framingRect.top, is(165));
+//    assertThat(framingRect.top, is(202));
+//    assertThat(framingRect.right, is(262));
+    assertThat(framingRect.right, is(322));
+//    assertThat(framingRect.bottom, is(386));
+    assertThat(framingRect.bottom, is(315));
+  }
+
 }
