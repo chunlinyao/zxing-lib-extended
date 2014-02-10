@@ -18,12 +18,10 @@ package com.google.zxing.client.android.camera;
 
 import android.graphics.Matrix;
 import android.graphics.Rect;
-import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.os.Handler;
 import android.util.Log;
 import android.view.Surface;
-import android.view.SurfaceHolder;
 import android.view.TextureView;
 
 import com.google.zxing.PlanarYUVLuminanceSource;
@@ -301,63 +299,20 @@ public final class CameraManager {
     // Go ahead and assume it's YUV rather than die.
     if (this.cameraRotationInDegrees % 180 == 0) {
       Log.i(TAG, "Rotate that YUV image");
-      byte[] rotateData = mirrorYUV420(rotateYUV420Degree90(data, width, height), height, width);
+      byte[] newData = YUVTransformer.rotate90degrees(data, width, height);
+
+      if (isFrontFacing()) {
+        newData = YUVTransformer.mirror(data, height, width);
+      }
 
       Rect rotateRect = new FramingCalculator(
           configManager.getScreenResolution(),
           configManager.getCameraResolution(),
           cameraRotationInDegrees).getFramingRectInPreview();
-      return new PlanarYUVLuminanceSource(rotateData, height, width, rotateRect.left, rotateRect.top, rotateRect.width(), rotateRect.height(), false);
+      return new PlanarYUVLuminanceSource(newData, height, width, rotateRect.left, rotateRect.top, rotateRect.width(), rotateRect.height(), false);
     } else {
       return new PlanarYUVLuminanceSource(data, width, height, rect.left, rect.top, rect.width(), rect.height(), false);
     }
-  }
-
-
-  private byte[] rotateYUV420Degree90(byte[] data, int imageWidth, int imageHeight) {
-    byte[] yuv = new byte[imageWidth * imageHeight * 3 / 2];
-    // Rotate the Y luma
-    int i = 0;
-    for (int x = 0; x < imageWidth; x++) {
-      for (int y = imageHeight - 1; y >= 0; y--) {
-        yuv[i] = data[y * imageWidth + x];
-        i++;
-      }
-    }
-    // Rotate the U and V color components
-    i = imageWidth * imageHeight * 3 / 2 - 1;
-    for (int x = imageWidth - 1; x > 0; x = x - 2) {
-      for (int y = 0; y < imageHeight / 2; y++) {
-        yuv[i] = data[(imageWidth * imageHeight) + (y * imageWidth) + x];
-        i--;
-        yuv[i] = data[(imageWidth * imageHeight) + (y * imageWidth) + (x - 1)];
-        i--;
-      }
-    }
-    return yuv;
-  }
-
-  private byte[] mirrorYUV420(byte[] data, int imageWidth, int imageHeight) {
-    byte[] yuv = new byte[imageWidth * imageHeight * 3 / 2];
-    // Mirror the Y luma
-    int i = 0;
-    for (int x = imageWidth - 1; x >= 0; x--) {
-      for (int y = imageHeight - 1; y >= 0; y--) {
-        yuv[i] = data[y * imageWidth + x];
-        i++;
-      }
-    }
-    // Rotate the U and V color components
-    i = imageWidth * imageHeight * 3 / 2 - 1;
-    for (int x = 0; x < imageWidth - 1; x = x + 2) {
-      for (int y = (imageHeight - 1) / 2; y >= 0; y--) {
-        yuv[i] = 0xf;
-        i--;
-        yuv[i] = 0xf;
-        i--;
-      }
-    }
-    return yuv;
   }
 
 
@@ -384,11 +339,17 @@ public final class CameraManager {
     return degrees;
   }
 
+  private boolean isFrontFacing() {
+    android.hardware.Camera.CameraInfo info = new android.hardware.Camera.CameraInfo();
+    android.hardware.Camera.getCameraInfo(cameraIndex, info);
+    return info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT;
+  }
+
   private void updateCameraOrientation(TextureView textureView) {
     android.hardware.Camera.CameraInfo info = new android.hardware.Camera.CameraInfo();
     android.hardware.Camera.getCameraInfo(cameraIndex, info);
     int result;
-    if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+    if (isFrontFacing()) {
       Log.i(TAG, "Front facing camera so trying to compensate the mirroring");
       result = (info.orientation + cameraRotationInDegrees) % 360;
       result = (360 - result) % 360;  // compensate the mirror

@@ -51,7 +51,7 @@ import java.io.IOException;
  */
 public class ZXingFragment extends Fragment {
 
-  private static final String TAG = "ZXingFragment"; //$NON-NLS-1$
+  private static final String TAG = ZXingFragment.class.getSimpleName();
   boolean hasSurface;
   private CameraManager cameraManager;
   private ViewfinderView viewfinderView;
