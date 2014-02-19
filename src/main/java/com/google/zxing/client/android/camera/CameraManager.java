@@ -16,13 +16,13 @@
 
 package com.google.zxing.client.android.camera;
 
-import android.content.Context;
+import android.graphics.Matrix;
 import android.graphics.Rect;
 import android.hardware.Camera;
 import android.os.Handler;
 import android.util.Log;
 import android.view.Surface;
-import android.view.SurfaceHolder;
+import android.view.TextureView;
 
 import com.google.zxing.PlanarYUVLuminanceSource;
 
@@ -39,7 +39,6 @@ public final class CameraManager {
 
   private static final String TAG = CameraManager.class.getSimpleName();
 
-  private final Context context;
   private final CameraConfigurationManager configManager;
 
   private Camera camera;
@@ -60,8 +59,7 @@ public final class CameraManager {
    */
   private final PreviewCallback previewCallback;
 
-  public CameraManager(Context context, CameraConfigurationManager configManager) {
-    this.context = context;
+  public CameraManager(CameraConfigurationManager configManager) {
     this.configManager = configManager;
     previewCallback = new PreviewCallback(configManager);
   }
@@ -72,7 +70,7 @@ public final class CameraManager {
    * @param holder The surface object which the camera will draw preview frames into.
    * @throws IOException Indicates the camera driver failed to open.
    */
-  public synchronized void openDriver(SurfaceHolder holder) throws IOException {
+  public synchronized void openDriver(TextureView holder) throws IOException {
     Camera theCamera = camera;
     if (theCamera == null) {
       theCamera = open();
@@ -80,9 +78,10 @@ public final class CameraManager {
         throw new IOException();
       }
       camera = theCamera;
-      updateCameraOrientation();
+      updateCameraOrientation(holder);
     }
-    theCamera.setPreviewDisplay(holder);
+    theCamera.setPreviewTexture(holder.getSurfaceTexture());
+
     calculateRotationInDegrees(cameraRotationInDegrees);
 
     if (!initialized) {
@@ -147,7 +146,7 @@ public final class CameraManager {
       Log.i(TAG, "No camera facing back; returning camera #0");
       cameraIndex = 0;
     }
-
+    Log.d(TAG, "Opening camera with index " + cameraIndex);
     return Camera.open(cameraIndex);
   }
 
@@ -287,55 +286,51 @@ public final class CameraManager {
    * A factory method to build the appropriate LuminanceSource object based on the format
    * of the preview buffers, as described by Camera.Parameters.
    *
-   * @param data   A preview frame.
-   * @param width  The width of the image.
-   * @param height The height of the image.
+   * @param image A YUVImage.
    * @return A PlanarYUVLuminanceSource instance.
    */
-  public PlanarYUVLuminanceSource buildLuminanceSource(byte[] data, int width, int height) {
+  public PlanarYUVLuminanceSource buildLuminanceSource(YUVImage image) {
     Rect rect = getFramingRectInPreview();
     if (rect == null) {
       return null;
     }
-    Log.i(TAG, "original : resolution:(" + width + "," + height + ") rect:(" + rect.left + "," + rect.top + ") (" + rect.width() + "," + rect.height() + ")");
-    // Go ahead and assume it's YUV rather than die.
-    if (this.cameraRotationInDegrees % 180 == 0) {
-      byte[] rotateData = rotateYUV420Degree90(data, width, height);
 
-      Rect rotateRect = new FramingCalculator(
+    YUVImage adjustedImage = adjustCameraImage(image);
+    Rect adjustedRect = adjustPreviewRectangle(rect);
+    return new PlanarYUVLuminanceSource(
+        adjustedImage.getData(),
+        adjustedImage.getWidth(),
+        adjustedImage.getHeight(),
+        adjustedRect.left,
+        adjustedRect.top,
+        adjustedRect.width(),
+        adjustedRect.height(),
+        false);
+  }
+
+  public YUVImage adjustCameraImage(YUVImage image) {
+    YUVImage result = image;
+    if (this.cameraRotationInDegrees % 180 == 0) {
+      if (isFrontFacing()) {
+        result = image.rotateCounterClockwise();
+      } else {
+        result = image.rotateClockwise();
+      }
+    }
+    return result;
+  }
+
+
+  public Rect adjustPreviewRectangle(Rect rect) {
+    if (this.cameraRotationInDegrees % 180 == 0) {
+      return new FramingCalculator(
           configManager.getScreenResolution(),
           configManager.getCameraResolution(),
           cameraRotationInDegrees).getFramingRectInPreview();
-      return new PlanarYUVLuminanceSource(rotateData, height, width, rotateRect.left, rotateRect.top, rotateRect.width(), rotateRect.height(), false);
     } else {
-      return new PlanarYUVLuminanceSource(data, width, height, rect.left, rect.top, rect.width(), rect.height(), false);
+      return rect;
     }
   }
-
-
-  private byte[] rotateYUV420Degree90(byte[] data, int imageWidth, int imageHeight) {
-    byte[] yuv = new byte[imageWidth * imageHeight * 3 / 2];
-    // Rotate the Y luma
-    int i = 0;
-    for (int x = 0; x < imageWidth; x++) {
-      for (int y = imageHeight - 1; y >= 0; y--) {
-        yuv[i] = data[y * imageWidth + x];
-        i++;
-      }
-    }
-    // Rotate the U and V color components
-    i = imageWidth * imageHeight * 3 / 2 - 1;
-    for (int x = imageWidth - 1; x > 0; x = x - 2) {
-      for (int y = 0; y < imageHeight / 2; y++) {
-        yuv[i] = data[(imageWidth * imageHeight) + (y * imageWidth) + x];
-        i--;
-        yuv[i] = data[(imageWidth * imageHeight) + (y * imageWidth) + (x - 1)];
-        i--;
-      }
-    }
-    return yuv;
-  }
-
 
   public void setCameraDisplayOrientation(int rotation) {
     cameraRotationInDegrees = calculateRotationInDegrees(rotation);
@@ -360,16 +355,30 @@ public final class CameraManager {
     return degrees;
   }
 
-  private void updateCameraOrientation() {
+  private boolean isFrontFacing() {
+    android.hardware.Camera.CameraInfo info = new android.hardware.Camera.CameraInfo();
+    android.hardware.Camera.getCameraInfo(cameraIndex, info);
+    return info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT;
+  }
+
+  private void updateCameraOrientation(TextureView textureView) {
     android.hardware.Camera.CameraInfo info = new android.hardware.Camera.CameraInfo();
     android.hardware.Camera.getCameraInfo(cameraIndex, info);
     int result;
-    if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+    if (isFrontFacing()) {
+      Log.i(TAG, "Front facing camera so trying to compensate the mirroring");
       result = (info.orientation + cameraRotationInDegrees) % 360;
       result = (360 - result) % 360;  // compensate the mirror
+
+      Matrix matrix = new Matrix();
+      matrix.setScale(-1, 1);
+      matrix.postTranslate(textureView.getWidth(), 0);
+      textureView.setTransform(matrix);
+
     } else {  // back-facing
       result = (info.orientation - cameraRotationInDegrees + 360) % 360;
     }
+    Log.i(TAG, "Settings application to orientation:" + result);
     camera.setDisplayOrientation(result);
   }
 }
