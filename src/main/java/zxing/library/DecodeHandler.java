@@ -20,9 +20,6 @@ import java.io.ByteArrayOutputStream;
 import java.util.Map;
 
 import android.graphics.Bitmap;
-import android.graphics.ImageFormat;
-import android.graphics.Rect;
-import android.graphics.YuvImage;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -36,6 +33,7 @@ import com.google.zxing.PlanarYUVLuminanceSource;
 import com.google.zxing.ReaderException;
 import com.google.zxing.Result;
 import com.google.zxing.client.android.R;
+import com.google.zxing.client.android.camera.YUVImage;
 import com.google.zxing.common.HybridBinarizer;
 
 final class DecodeHandler extends Handler {
@@ -58,7 +56,7 @@ final class DecodeHandler extends Handler {
       return;
     }
     if (message.what == R.id.decode) {
-      decode((byte[]) message.obj, message.arg1, message.arg2);
+      decode(new YUVImage((byte[]) message.obj, message.arg1, message.arg2));
     } else if (message.what == R.id.quit) {
       running = false;
       Looper.myLooper().quit();
@@ -70,14 +68,12 @@ final class DecodeHandler extends Handler {
    * took. For efficiency, reuse the same reader objects from one decode to
    * the next.
    *
-   * @param data   The YUV preview frame.
-   * @param width  The width of the preview frame.
-   * @param height The height of the preview frame.
+   * @param image   The YUV preview frame.
    */
-  private void decode(byte[] data, int width, int height) {
+  private void decode(YUVImage image) {
     long start = System.currentTimeMillis();
     Result rawResult = null;
-    PlanarYUVLuminanceSource source = activity.getCameraManager().buildLuminanceSource(data, width, height);
+    PlanarYUVLuminanceSource source = activity.getCameraManager().buildLuminanceSource(image);
     if (source != null) {
       BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
       try {

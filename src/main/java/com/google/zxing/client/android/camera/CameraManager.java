@@ -146,7 +146,7 @@ public final class CameraManager {
       Log.i(TAG, "No camera facing back; returning camera #0");
       cameraIndex = 0;
     }
-
+    Log.d(TAG, "Opening camera with index " + cameraIndex);
     return Camera.open(cameraIndex);
   }
 
@@ -286,35 +286,51 @@ public final class CameraManager {
    * A factory method to build the appropriate LuminanceSource object based on the format
    * of the preview buffers, as described by Camera.Parameters.
    *
-   * @param data   A preview frame.
-   * @param width  The width of the image.
-   * @param height The height of the image.
+   * @param image A YUVImage.
    * @return A PlanarYUVLuminanceSource instance.
    */
-  public PlanarYUVLuminanceSource buildLuminanceSource(byte[] data, int width, int height) {
+  public PlanarYUVLuminanceSource buildLuminanceSource(YUVImage image) {
     Rect rect = getFramingRectInPreview();
     if (rect == null) {
       return null;
     }
-    // Go ahead and assume it's YUV rather than die.
+
+    YUVImage adjustedImage = adjustCameraImage(image);
+    Rect adjustedRect = adjustPreviewRectangle(rect);
+    return new PlanarYUVLuminanceSource(
+        adjustedImage.getData(),
+        adjustedImage.getWidth(),
+        adjustedImage.getHeight(),
+        adjustedRect.left,
+        adjustedRect.top,
+        adjustedRect.width(),
+        adjustedRect.height(),
+        false);
+  }
+
+  public YUVImage adjustCameraImage(YUVImage image) {
+    YUVImage result = image;
     if (this.cameraRotationInDegrees % 180 == 0) {
-      Log.i(TAG, "Rotate that YUV image");
-      byte[] newData = YUVTransformer.rotate90degrees(data, width, height);
-
       if (isFrontFacing()) {
-        newData = YUVTransformer.mirror(data, height, width);
+        result = image.rotateCounterClockwise();
+      } else {
+        result = image.rotateClockwise();
       }
+    }
+    return result;
+  }
 
-      Rect rotateRect = new FramingCalculator(
+
+  public Rect adjustPreviewRectangle(Rect rect) {
+    if (this.cameraRotationInDegrees % 180 == 0) {
+      return new FramingCalculator(
           configManager.getScreenResolution(),
           configManager.getCameraResolution(),
           cameraRotationInDegrees).getFramingRectInPreview();
-      return new PlanarYUVLuminanceSource(newData, height, width, rotateRect.left, rotateRect.top, rotateRect.width(), rotateRect.height(), false);
     } else {
-      return new PlanarYUVLuminanceSource(data, width, height, rect.left, rect.top, rect.width(), rect.height(), false);
+      return rect;
     }
   }
-
 
   public void setCameraDisplayOrientation(int rotation) {
     cameraRotationInDegrees = calculateRotationInDegrees(rotation);
