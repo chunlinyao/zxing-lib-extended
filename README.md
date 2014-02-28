@@ -1,8 +1,18 @@
 #zxing-android
 This is a fork of Joe Simpson (@kennydude)'s work here: [https://github.com/kennydude/zxing-lib](https://github.com/kennydude/zxing-lib)
 
+##Building the library for internal use
+To build the library:
+
+* Checkout Branch 'android-15'
+* Build the library using the command 'gradle uploadArchives'. 
+
+This will copy the library to your local ~/.m2 repository.
+
 ##Why?
-To fix a number of open issues which haven't been resolved in the upstream project.
+
+* To fix a number of open issues which haven't been resolved in the upstream project. 
+* Configures the Activity for portrait orientation to suit Wincor-Nixdorf's Albert Device.
 
 ##Using the library
 Add the following dependency to your POM:  
