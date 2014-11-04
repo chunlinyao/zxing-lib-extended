@@ -187,7 +187,13 @@ public class ZXingFragment extends Fragment implements SurfaceHolder.Callback {
 		return cameraManager;
 	}
 
-	public Handler getHandler() {
+    public void setTorch(boolean newSetting) {
+        if(cameraManager != null) {
+            cameraManager.setTorch(newSetting);
+        }
+    }
+
+    public Handler getHandler() {
 		return handler;
 	}
 
