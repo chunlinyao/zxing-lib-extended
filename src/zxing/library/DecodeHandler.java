@@ -26,6 +26,7 @@ import com.google.zxing.*;
 import com.google.zxing.client.android.R;
 import com.google.zxing.common.HybridBinarizer;
 
+import java.io.ByteArrayOutputStream;
 import java.util.Map;
 
 final class DecodeHandler extends Handler {
@@ -48,9 +49,17 @@ final class DecodeHandler extends Handler {
       return;
     }
     if (message.what == R.id.decode) {
-		decode((byte[]) message.obj, message.arg1, message.arg2);
-	} else if (message.what == R.id.quit) {
+        try {
+            Log.v(TAG, "decode start in decode handler");
+            decode((byte[]) message.obj, message.arg1, message.arg2);
+            Log.v(TAG, "decode stop in decode handler");
+        } catch (IllegalArgumentException e) {
+            Log.v(TAG,"decode failed", e);
+            activity.getHandler().obtainMessage(R.id.decode_failed).sendToTarget();
+        }
+    } else if (message.what == R.id.quit) {
 		running = false;
+        Log.v(TAG, "decode looper quit");
 		Looper.myLooper().quit();
 	}
   }
@@ -87,7 +96,9 @@ final class DecodeHandler extends Handler {
         Message message = Message.obtain(handler, R.id.decode_succeeded, rawResult);
         Bundle bundle = new Bundle();
         Bitmap grayscaleBitmap = toBitmap(source.renderThumbnail(), source.getThumbnailWidth(), source.getThumbnailHeight());
-        bundle.putParcelable(DecodeThread.BARCODE_BITMAP, grayscaleBitmap);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        grayscaleBitmap.compress(Bitmap.CompressFormat.JPEG, 50, out);
+        bundle.putByteArray(DecodeThread.BARCODE_BITMAP, out.toByteArray());
         message.setData(bundle);
         message.sendToTarget();
       }
