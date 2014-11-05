@@ -69,7 +69,6 @@ public class FragmentHandler extends Handler {
 		} else if (message.what == R.id.decode_failed) {
 			// We're decoding as fast as possible, so when one decode fails,
 			// start another.
-            Log.v(TAG, "decode_failed");
 			state = State.PREVIEW;
 			cameraManager.requestPreviewFrame(decodeThread.getHandler(),
 					R.id.decode);
@@ -77,7 +76,6 @@ public class FragmentHandler extends Handler {
 	}
 
 	public void quitSynchronously() {
-        Log.v(TAG, "quitSynchronously");
 		state = State.DONE;
 		cameraManager.stopPreview();
 		Message quit = Message.obtain(decodeThread.getHandler(), R.id.quit);

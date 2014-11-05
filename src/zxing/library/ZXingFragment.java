@@ -31,6 +31,7 @@ public class ZXingFragment extends Fragment implements SurfaceHolder.Callback {
 	private ViewfinderView viewfinderView;
 	private FragmentHandler handler;
 	private Result savedResultToShow;
+    private boolean paused = true;
 
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -53,50 +54,63 @@ public class ZXingFragment extends Fragment implements SurfaceHolder.Callback {
 	@Override
 	public void onResume() {
 		super.onResume();
+        resumeCamera();
+    }
 
-		// Setup camera view
-		cameraManager = new CameraManager(getActivity());
-		cameraManager.setManualFramingRect(getView().getWidth(), getView().getHeight());
+    public void resumeCamera() {
+        if(paused && isResumed()) {
+            // Setup camera view
+            cameraManager = new CameraManager(getActivity());
+            cameraManager.setManualFramingRect(getView().getWidth(), getView().getHeight());
 
-		viewfinderView = (ViewfinderView) getView().findViewById(
-				R.id.viewfinder_view);
-		viewfinderView.setCameraManager(cameraManager);
+            viewfinderView = (ViewfinderView) getView().findViewById(
+                    R.id.viewfinder_view);
+            viewfinderView.setCameraManager(cameraManager);
 
-		SurfaceView surfaceView = (SurfaceView) getView().findViewById(
-				R.id.preview_view);
-		SurfaceHolder surfaceHolder = surfaceView.getHolder();
-		if (hasSurface) {
-			// The activity was paused but not stopped, so the surface still
-			// exists. Therefore
-			// surfaceCreated() won't be called, so init the camera here.
-			initCamera(surfaceHolder);
-		} else {
-			// Install the callback and wait for surfaceCreated() to init the
-			// camera.
-			surfaceHolder.addCallback(this);
-			surfaceHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
-		}
-	}
+            SurfaceView surfaceView = (SurfaceView) getView().findViewById(
+                    R.id.preview_view);
+            SurfaceHolder surfaceHolder = surfaceView.getHolder();
+            if (hasSurface) {
+                // The activity was paused but not stopped, so the surface still
+                // exists. Therefore
+                // surfaceCreated() won't be called, so init the camera here.
+                initCamera(surfaceHolder);
+            } else {
+                // Install the callback and wait for surfaceCreated() to init the
+                // camera.
+                surfaceHolder.addCallback(this);
+                surfaceHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
+            }
+            paused = false;
+        }
+    }
 
-	@Override
+    @Override
 	public void onPause() {
-		if (handler != null) {
-			handler.quitSynchronously();
-			handler = null;
-		}
-		// inactivityTimer.onPause();
-		// ambientLightManager.stop();
-		cameraManager.closeDriver();
-		if (!hasSurface) {
-			SurfaceView surfaceView = (SurfaceView) getView().findViewById(
-					R.id.preview_view);
-			SurfaceHolder surfaceHolder = surfaceView.getHolder();
-			surfaceHolder.removeCallback(this);
-		}
+        pauseCamera();
 		super.onPause();
 	}
 
-	private void initCamera(SurfaceHolder surfaceHolder) {
+    public void pauseCamera() {
+        if(!paused) {
+            if (handler != null) {
+                handler.quitSynchronously();
+                handler = null;
+            }
+            // inactivityTimer.onPause();
+            // ambientLightManager.stop();
+            cameraManager.closeDriver();
+            if (!hasSurface) {
+                SurfaceView surfaceView = (SurfaceView) getView().findViewById(
+                        R.id.preview_view);
+                SurfaceHolder surfaceHolder = surfaceView.getHolder();
+                surfaceHolder.removeCallback(this);
+            }
+            paused = true;
+        }
+    }
+
+    private void initCamera(SurfaceHolder surfaceHolder) {
 		if (surfaceHolder == null) {
 			throw new IllegalStateException("No SurfaceHolder provided");
 		}
@@ -154,12 +168,10 @@ public class ZXingFragment extends Fragment implements SurfaceHolder.Callback {
 
 	@Override
 	public void surfaceChanged(SurfaceHolder arg0, int arg1, int arg2, int arg3) {
-		// TODO Auto-generated method stub
-	}
+    }
 
 	@Override
 	public void surfaceCreated(SurfaceHolder holder) {
-		Log.d(TAG, "surface created");
 		if (holder == null) {
 			Log.e(TAG,
 					"*** WARNING *** surfaceCreated() gave us a null surface!");
@@ -172,7 +184,7 @@ public class ZXingFragment extends Fragment implements SurfaceHolder.Callback {
 
 	@Override
 	public void surfaceDestroyed(SurfaceHolder arg0) {
-		hasSurface = false;
+        hasSurface = false;
 	}
 
 	public ViewfinderView getViewfinderView() {

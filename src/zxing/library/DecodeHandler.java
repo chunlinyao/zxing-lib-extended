@@ -50,16 +50,12 @@ final class DecodeHandler extends Handler {
     }
     if (message.what == R.id.decode) {
         try {
-            Log.v(TAG, "decode start in decode handler");
             decode((byte[]) message.obj, message.arg1, message.arg2);
-            Log.v(TAG, "decode stop in decode handler");
         } catch (IllegalArgumentException e) {
-            Log.v(TAG,"decode failed", e);
             activity.getHandler().obtainMessage(R.id.decode_failed).sendToTarget();
         }
     } else if (message.what == R.id.quit) {
 		running = false;
-        Log.v(TAG, "decode looper quit");
 		Looper.myLooper().quit();
 	}
   }
