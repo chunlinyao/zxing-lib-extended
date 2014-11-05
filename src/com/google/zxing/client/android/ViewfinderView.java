@@ -91,13 +91,8 @@ public final class ViewfinderView extends View {
       float realHeight = canvas.getHeight();
       float width, height;
       Point screenResolution = cameraManager.getScreenResolution();
-      if(cameraManager.isPortait()) {
-          width = screenResolution.y;
-          height = screenResolution.x;
-      } else {
-          width = screenResolution.x;
-          height = screenResolution.y;
-      }
+      width = screenResolution.x;
+      height = screenResolution.y;
       Matrix scaleToScreen = new Matrix();
       scaleToScreen.setScale(realWidth / width, realHeight / height);
 

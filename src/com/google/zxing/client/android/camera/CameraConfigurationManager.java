@@ -69,9 +69,9 @@ final class CameraConfigurationManager {
 
         //May be portrait mode
         Point rotatedScreen = screenResolution;
-        if(screenResolution.x < screenResolution.y) {
-            rotatedScreen = new Point(screenResolution.y, screenResolution.x);
-        }
+//        if(screenResolution.x < screenResolution.y) {
+//            rotatedScreen = new Point(screenResolution.y, screenResolution.x);
+//        }
         Log.i(TAG, "Screen resolution: " + screenResolution);
         cameraResolution =  CameraConfigurationUtils.findBestPreviewSizeValue(parameters, rotatedScreen);
         Log.i(TAG, "Camera resolution: " + cameraResolution);
