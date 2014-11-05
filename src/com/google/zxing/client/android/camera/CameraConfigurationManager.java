@@ -40,113 +40,162 @@ import java.util.*;
  */
 final class CameraConfigurationManager {
 
-  private static final String TAG = "CameraConfiguration";
+    private static final String TAG = "CameraConfiguration";
 
-  // This is bigger than the size of a small screen, which is still supported. The routine
-  // below will still select the default (presumably 320x240) size for these. This prevents
-  // accidental selection of very low resolution on some devices.
-  private static final int MIN_PREVIEW_PIXELS = 470 * 320; // normal screen
-  private static final int MAX_PREVIEW_PIXELS = 1280 * 720;
+    // This is bigger than the size of a small screen, which is still supported. The routine
+    // below will still select the default (presumably 320x240) size for these. This prevents
+    // accidental selection of very low resolution on some devices.
+    private static final int MIN_PREVIEW_PIXELS = 470 * 320; // normal screen
+    private static final int MAX_PREVIEW_PIXELS = 1280 * 720;
 
-  private final Context context;
-  private final Activity activity;
-  private Point screenResolution;
-  private Point cameraResolution;
+    private final Context context;
+    private final Activity activity;
+    private Point screenResolution;
+    private Point cameraResolution;
 
-  CameraConfigurationManager(Context context) {
-    this.context = context.getApplicationContext();
-    this.activity = (Activity) context;
-  }
-
-  /**
-   * Reads, one time, values from the camera that are needed by the app.
-   */
-  void initFromCameraParameters(Camera camera) {
-    Camera.Parameters parameters = camera.getParameters();
-    WindowManager manager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
-    Display display = manager.getDefaultDisplay();
-    DisplayMetrics metrics = new DisplayMetrics();
-    display.getMetrics(metrics);
-
-    screenResolution = new Point();
-    int width = metrics.widthPixels;
-    int height = metrics.heightPixels;
-
-    // Remove action bar height
-    TypedValue typedValue = new TypedValue();
-    DisplayMetrics displayMetrics = this.context.getResources().getDisplayMetrics();
-    if (this.context.getTheme().resolveAttribute(android.R.attr.actionBarSize, typedValue, true)) {
-        height -= TypedValue.complexToDimensionPixelSize(typedValue.data, displayMetrics);
-    }
-    else {
-        if (display.getRotation() == Surface.ROTATION_0)
-            height -= 40 * displayMetrics.density;
-        else
-            height -= 48 * displayMetrics.density;
+    CameraConfigurationManager(Context context) {
+        this.context = context.getApplicationContext();
+        this.activity = (Activity) context;
     }
 
-    height -= statusBarHeight();
+    /**
+     * Reads, one time, values from the camera that are needed by the app.
+     */
+    void initFromCameraParameters(Camera camera) {
+        Camera.Parameters parameters = camera.getParameters();
+        WindowManager manager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+        Display display = manager.getDefaultDisplay();
+        DisplayMetrics metrics = new DisplayMetrics();
+        display.getMetrics(metrics);
 
-    screenResolution.set(width, height);
+        screenResolution = new Point();
+        int width = metrics.widthPixels;
+        int height = metrics.heightPixels;
 
-    Log.i(TAG, "Screen resolution: " + screenResolution);
-    cameraResolution = findBestPreviewSizeValue(parameters, screenResolution);
-    Log.i(TAG, "Camera resolution: " + cameraResolution);
-  }
+        // Remove action bar height
+        TypedValue typedValue = new TypedValue();
+        DisplayMetrics displayMetrics = this.context.getResources().getDisplayMetrics();
+        if (this.context.getTheme().resolveAttribute(android.R.attr.actionBarSize, typedValue, true)) {
+            height -= TypedValue.complexToDimensionPixelSize(typedValue.data, displayMetrics);
+        } else {
+            if (display.getRotation() == Surface.ROTATION_0)
+                height -= 40 * displayMetrics.density;
+            else
+                height -= 48 * displayMetrics.density;
+        }
 
-  void setDesiredCameraParameters(Camera camera, boolean safeMode) {
-    // Checkout of screen orientation
-    WindowManager manager = (WindowManager) this.context.getSystemService(Context.WINDOW_SERVICE);
-    int rotation = manager.getDefaultDisplay().getRotation();
-    if (rotation == Surface.ROTATION_0) {
-      camera.setDisplayOrientation(90);
+        height -= statusBarHeight();
+
+        screenResolution.set(width, height);
+
+        Log.i(TAG, "Screen resolution: " + screenResolution);
+        cameraResolution = findBestPreviewSizeValue(parameters, screenResolution);
+        Log.i(TAG, "Camera resolution: " + cameraResolution);
     }
 
+    void setDesiredCameraParameters(Camera camera, boolean safeMode) {
+        int result = caculateDisplayRotation();
+        camera.setDisplayOrientation(result);
 
-    Camera.Parameters parameters = camera.getParameters();
 
-    if (parameters == null) {
-      Log.w(TAG, "Device error: no camera parameters are available. Proceeding without configuration.");
-      return;
+        Camera.Parameters parameters = camera.getParameters();
+
+        if (parameters == null) {
+            Log.w(TAG, "Device error: no camera parameters are available. Proceeding without configuration.");
+            return;
+        }
+
+        Log.i(TAG, "Initial camera parameters: " + parameters.flatten());
+
+        if (safeMode) {
+            Log.w(TAG, "In camera config safe mode -- most settings will not be honored");
+        }
+
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+
+        initializeTorch(parameters, prefs, safeMode);
+
+        String focusMode = null;
+        if (prefs.getBoolean(PreferencesActivity.KEY_AUTO_FOCUS, true)) {
+            if (safeMode || prefs.getBoolean(PreferencesActivity.KEY_DISABLE_CONTINUOUS_FOCUS, false)) {
+                focusMode = findSettableValue(parameters.getSupportedFocusModes(),
+                        Camera.Parameters.FOCUS_MODE_AUTO);
+            } else {
+                focusMode = findSettableValue(parameters.getSupportedFocusModes(),
+                        "continuous-picture", // Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE in 4.0+
+                        "continuous-video",   // Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO in 4.0+
+                        Camera.Parameters.FOCUS_MODE_AUTO);
+            }
+        }
+        // Maybe selected auto-focus but not available, so fall through here:
+        if (!safeMode && focusMode == null) {
+            focusMode = findSettableValue(parameters.getSupportedFocusModes(),
+                    Camera.Parameters.FOCUS_MODE_MACRO,
+                    "edof"); // Camera.Parameters.FOCUS_MODE_EDOF in 2.2+
+        }
+        if (focusMode != null) {
+            parameters.setFocusMode(focusMode);
+        }
+
+        parameters.setPreviewSize(cameraResolution.x, cameraResolution.y);
+        camera.setParameters(parameters);
     }
 
-    Log.i(TAG, "Initial camera parameters: " + parameters.flatten());
+    private int caculateDisplayRotation() {
+        // Checkout of screen orientation
+        WindowManager manager = (WindowManager) this.context.getSystemService(Context.WINDOW_SERVICE);
+        int rotation = manager.getDefaultDisplay().getRotation();
 
-    if (safeMode) {
-      Log.w(TAG, "In camera config safe mode -- most settings will not be honored");
+        int degrees = 0;
+        switch (rotation) {
+            case Surface.ROTATION_0:
+                degrees = 0;
+                break;
+            case Surface.ROTATION_90:
+                degrees = 90;
+                break;
+            case Surface.ROTATION_180:
+                degrees = 180;
+                break;
+            case Surface.ROTATION_270:
+                degrees = 270;
+                break;
+        }
+
+        int result;
+        Camera.CameraInfo info = getCameraInfo();
+        if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+            result = (info.orientation + degrees) % 360;
+            result = (360 - result) % 360;  // compensate the mirror
+        } else {  // back-facing
+            result = (info.orientation - degrees + 360) % 360;
+        }
+        return result;
     }
 
-    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+    /**
+     * zxing use first backing camera, so we return the first backing camera.
+     * @return
+     */
+    private Camera.CameraInfo getCameraInfo() {
 
-    initializeTorch(parameters, prefs, safeMode);
+        int numberOfCameras = Camera.getNumberOfCameras();
+        Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
+        for(
+        int i = 0;
+        i<numberOfCameras;i++)
 
-    String focusMode = null;
-    if (prefs.getBoolean(PreferencesActivity.KEY_AUTO_FOCUS, true)) {
-      if (safeMode || prefs.getBoolean(PreferencesActivity.KEY_DISABLE_CONTINUOUS_FOCUS, false)) {
-        focusMode = findSettableValue(parameters.getSupportedFocusModes(),
-                                      Camera.Parameters.FOCUS_MODE_AUTO);
-      } else {
-        focusMode = findSettableValue(parameters.getSupportedFocusModes(),
-                                      "continuous-picture", // Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE in 4.0+
-                                      "continuous-video",   // Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO in 4.0+
-                                      Camera.Parameters.FOCUS_MODE_AUTO);
-      }
-    }
-    // Maybe selected auto-focus but not available, so fall through here:
-    if (!safeMode && focusMode == null) {
-      focusMode = findSettableValue(parameters.getSupportedFocusModes(),
-                                    Camera.Parameters.FOCUS_MODE_MACRO,
-                                    "edof"); // Camera.Parameters.FOCUS_MODE_EDOF in 2.2+
-    }
-    if (focusMode != null) {
-      parameters.setFocusMode(focusMode);
+        {
+            Camera.getCameraInfo(i, cameraInfo);
+            if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_BACK) {
+                return cameraInfo;
+            }
+        }
+
+        return null;
     }
 
-    parameters.setPreviewSize(cameraResolution.x, cameraResolution.y);
-    camera.setParameters(parameters);
-  }
-
-  Point getCameraResolution() {
+    Point getCameraResolution() {
     return cameraResolution;
   }
 
