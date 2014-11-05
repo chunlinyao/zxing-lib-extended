@@ -20,8 +20,11 @@ import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.graphics.Point;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.view.View;
 import com.google.zxing.ResultPoint;
@@ -80,20 +83,36 @@ public final class ViewfinderView extends View {
     if (cameraManager == null) {
       return; // not ready yet, early draw before done configuring
     }
-    Rect frame = cameraManager.getFramingRect();
-    if (frame == null) {
+    Rect realFrame = cameraManager.getFramingRect();
+    if (realFrame == null) {
       return;
     }
-    int width = canvas.getWidth();
-    int height = canvas.getHeight();
+      float realWidth = canvas.getWidth();
+      float realHeight = canvas.getHeight();
+      float width, height;
+      Point screenResolution = cameraManager.getScreenResolution();
+      if(cameraManager.isPortait()) {
+          width = screenResolution.y;
+          height = screenResolution.x;
+      } else {
+          width = screenResolution.x;
+          height = screenResolution.y;
+      }
+      Matrix scaleToScreen = new Matrix();
+      scaleToScreen.setScale(realWidth / width, realHeight / height);
+
+      RectF frameF = new RectF();
+      scaleToScreen.mapRect(frameF, new RectF(realFrame));
+      Rect frame = new Rect();
+      frameF.roundOut(frame);
     Rect previewFrame = cameraManager.getFramingRectInPreview();
 
       // Draw the exterior (i.e. outside the framing rect) darkened
     paint.setColor(resultBitmap != null ? resultColor : maskColor);
-    canvas.drawRect(0, 0, width, previewFrame.top, paint);
-    canvas.drawRect(0, previewFrame.top, previewFrame.left, previewFrame.bottom + 1, paint);
-    canvas.drawRect(previewFrame.right + 1, previewFrame.top, width, previewFrame.bottom + 1, paint);
-    canvas.drawRect(0, previewFrame.bottom + 1, width, height, paint);
+    canvas.drawRect(0, 0, width, frame.top, paint);
+    canvas.drawRect(0, frame.top, frame.left, frame.bottom + 1, paint);
+    canvas.drawRect(frame.right + 1, frame.top, width, frame.bottom + 1, paint);
+    canvas.drawRect(0, frame.bottom + 1, width, height, paint);
 
     if (resultBitmap != null) {
       // Draw the opaque result bitmap over the scanning rectangle
@@ -105,8 +124,8 @@ public final class ViewfinderView extends View {
       paint.setColor(laserColor);
       paint.setAlpha(SCANNER_ALPHA[scannerAlpha]);
       scannerAlpha = (scannerAlpha + 1) % SCANNER_ALPHA.length;
-      int middle = previewFrame.height() / 2 + previewFrame.top;
-      canvas.drawRect(previewFrame.left + 2, middle - 1, previewFrame.right - 1, middle + 2, paint);
+      int middle = frame.height() / 2 + frame.top;
+      canvas.drawRect(frame.left + 2, middle - 1, frame.right - 1, middle + 2, paint);
       
       float scaleX = frame.width() / (float) previewFrame.width();
       float scaleY = frame.height() / (float) previewFrame.height();
@@ -146,10 +165,10 @@ public final class ViewfinderView extends View {
       // Request another update at the animation interval, but only repaint the laser line,
       // not the entire viewfinder mask.
       postInvalidateDelayed(ANIMATION_DELAY,
-                            frame.left - POINT_SIZE,
-                            frame.top - POINT_SIZE,
-                            frame.right + POINT_SIZE,
-                            frame.bottom + POINT_SIZE);
+              frame.left - POINT_SIZE,
+              frame.top - POINT_SIZE,
+              frame.right + POINT_SIZE,
+              frame.bottom + POINT_SIZE);
     }
   }
 

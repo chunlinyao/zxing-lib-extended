@@ -61,6 +61,7 @@ public class ZXingFragment extends Fragment implements SurfaceHolder.Callback {
         if(paused && isResumed()) {
             // Setup camera view
             cameraManager = new CameraManager(getActivity());
+            //setManualFramingRect没有效果
             cameraManager.setManualFramingRect(getView().getWidth(), getView().getHeight());
 
             viewfinderView = (ViewfinderView) getView().findViewById(

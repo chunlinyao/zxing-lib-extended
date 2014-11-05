@@ -17,6 +17,7 @@
 package com.google.zxing.client.android.camera;
 
 import android.content.Context;
+import android.content.res.Configuration;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.hardware.Camera;
@@ -260,23 +261,22 @@ public final class CameraManager {
       }
 
 
-      Display display = windowManager.getDefaultDisplay();
+        Display display = windowManager.getDefaultDisplay();
 
-      int rotation = display.getRotation();
+        int rotation = display.getRotation();
 
-      if (rotation == Surface.ROTATION_0) {
-          rect.left = rect.left * cameraResolution.y / screenResolution.x;
-          rect.right = rect.right * cameraResolution.y / screenResolution.x;
-          rect.top = rect.top * cameraResolution.x / screenResolution.y;
-          rect.bottom = rect.bottom * cameraResolution.x / screenResolution.y;
-      }
-      else {
-          rect.left = rect.left * cameraResolution.x / screenResolution.x;
-          rect.right = rect.right * cameraResolution.x / screenResolution.x;
-          rect.top = rect.top * cameraResolution.y / screenResolution.y;
-          rect.bottom = rect.bottom * cameraResolution.y / screenResolution.y;
-      }
-
+        if (rotation == Surface.ROTATION_0) {
+            rect.left = rect.left * cameraResolution.y / screenResolution.x;
+            rect.right = rect.right * cameraResolution.y / screenResolution.x;
+            rect.top = rect.top * cameraResolution.x / screenResolution.y;
+            rect.bottom = rect.bottom * cameraResolution.x / screenResolution.y;
+        }
+        else {
+            rect.left = rect.left * cameraResolution.x / screenResolution.x;
+            rect.right = rect.right * cameraResolution.x / screenResolution.x;
+            rect.top = rect.top * cameraResolution.y / screenResolution.y;
+            rect.bottom = rect.bottom * cameraResolution.y / screenResolution.y;
+        }
       framingRectInPreview = rect;
     }
     return framingRectInPreview;
@@ -313,12 +313,10 @@ public final class CameraManager {
         /**
          * Hack of orientation
          */
-        Display display = windowManager.getDefaultDisplay();
-
-        int rotation = display.getRotation();
+        boolean isPortait = isPortait();
 
         byte[] rotatedData = new byte[data.length];
-        if (rotation == Surface.ROTATION_0) {
+        if (isPortait) {
             for (int y = 0; y < height; y++) {
                 for (int x = 0; x < width; x++)
                     rotatedData[x * height + height - y - 1] = data[x + y * width];
@@ -336,8 +334,16 @@ public final class CameraManager {
             return null;
         }
         // Go ahead and assume it's YUV rather than die.
-        return new PlanarYUVLuminanceSource(rotation == Surface.ROTATION_0 ? rotatedData: data, width, height, rect.left, rect.top,
+        return new PlanarYUVLuminanceSource(isPortait ? rotatedData: data, width, height, rect.left, rect.top,
                                             rect.width(), rect.height(), false);
   }
 
+    public boolean isPortait() {
+        return context.getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT;
+    }
+
+
+    public Point getScreenResolution() {
+        return configManager.getScreenResolution();
+    }
 }
