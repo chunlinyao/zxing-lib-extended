@@ -43,8 +43,8 @@ public final class CameraManager {
 
   private static final String TAG = CameraManager.class.getSimpleName();
 
-  private static final int MIN_FRAME_WIDTH = 240;
-  private static final int MIN_FRAME_HEIGHT = 240;
+  private static final int MIN_FRAME_WIDTH = 40;
+  private static final int MIN_FRAME_HEIGHT = 40;
   private static final int MAX_FRAME_WIDTH = 1200;
   private static final int MAX_FRAME_HEIGHT = 675;
 
@@ -263,11 +263,7 @@ public final class CameraManager {
       }
 
 
-        Display display = windowManager.getDefaultDisplay();
-
-        int rotation = display.getRotation();
-
-        if (rotation == Surface.ROTATION_0) {
+        if (isPortait()) {
             rect.left = rect.left * cameraResolution.y / screenResolution.x;
             rect.right = rect.right * cameraResolution.y / screenResolution.x;
             rect.top = rect.top * cameraResolution.x / screenResolution.y;

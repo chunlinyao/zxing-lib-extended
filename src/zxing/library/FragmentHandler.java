@@ -79,7 +79,6 @@ public class FragmentHandler extends Handler {
 			cameraManager.requestPreviewFrame(decodeThread.getHandler(),
 					R.id.decode);
             failedCount++;
-            Log.v(TAG, "failed");
 		}
 	}
 
