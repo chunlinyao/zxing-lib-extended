@@ -22,6 +22,7 @@ import android.content.SharedPreferences;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.hardware.Camera;
+import android.os.Build;
 import android.preference.PreferenceManager;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -61,17 +62,27 @@ final class CameraConfigurationManager {
      */
     void initFromCameraParameters(Camera camera) {
         Camera.Parameters parameters = camera.getParameters();
-        WindowManager manager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
-        Display display = manager.getDefaultDisplay();
 
-        screenResolution = new Point();
-        display.getSize(screenResolution);
+        if(screenResolution == null) {
+            WindowManager manager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+            Display display = manager.getDefaultDisplay();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR2) {
+                screenResolution = new Point();
+                display.getSize(screenResolution);
+            } else {
+                DisplayMetrics metrics = new DisplayMetrics();
+                display.getMetrics(metrics);
 
+                int width = metrics.widthPixels;
+                int height = metrics.heightPixels;
+                screenResolution = new Point(width, height);
+            }
+        }
         //May be portrait mode
         Point rotatedScreen = screenResolution;
-//        if(screenResolution.x < screenResolution.y) {
-//            rotatedScreen = new Point(screenResolution.y, screenResolution.x);
-//        }
+        if(screenResolution.x < screenResolution.y) {
+            rotatedScreen = new Point(screenResolution.y, screenResolution.x);
+        }
         Log.i(TAG, "Screen resolution: " + screenResolution);
         cameraResolution =  CameraConfigurationUtils.findBestPreviewSizeValue(parameters, rotatedScreen);
         Log.i(TAG, "Camera resolution: " + cameraResolution);
@@ -257,4 +268,8 @@ final class CameraConfigurationManager {
 
       return result;
   }
+
+    public void setScreenResolution(Point screenResolution) {
+        this.screenResolution = screenResolution;
+    }
 }

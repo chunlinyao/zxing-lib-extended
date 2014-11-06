@@ -91,6 +91,8 @@ public final class CameraManager {
 
     if (!initialized) {
       initialized = true;
+      Rect rect = holder.getSurfaceFrame();
+      configManager.setScreenResolution(new Point(rect.width(), rect.height()));
       configManager.initFromCameraParameters(theCamera);
       if (requestedFramingRectWidth > 0 && requestedFramingRectHeight > 0) {
         setManualFramingRect(requestedFramingRectWidth, requestedFramingRectHeight);
@@ -229,8 +231,8 @@ public final class CameraManager {
         height = MAX_FRAME_HEIGHT;
       }
 
-//      if (width < height)
-//        height = width;
+      if (width < height)
+        height = width;
 
       int leftOffset = (screenResolution.x - width) / 2;
       int topOffset, bottomOffset;
