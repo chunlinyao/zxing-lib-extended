@@ -58,7 +58,7 @@ public class ZXingFragment extends Fragment {
   private FragmentHandler handler;
   private Result savedResultToShow;
   private TextureView.SurfaceTextureListener callback;
-
+  private boolean paused = true;
   @Override
   public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
     return inflater.inflate(R.layout.fragment_capture, container, false);
@@ -79,75 +79,90 @@ public class ZXingFragment extends Fragment {
   @Override
   public void onResume() {
     super.onResume();
+      resumeCamera();
 
-    // Setup camera view
-    Context context = getActivity().getApplication();
-    cameraManager = new CameraManager(new CameraConfigurationManager(context));
-    cameraManager.setManualFramingRect(getView().getWidth(), getView().getHeight());
-    cameraManager.setCameraDisplayOrientation(getActivity().getWindowManager().getDefaultDisplay().getRotation());
 
-    viewfinderView = (ViewfinderView) getView().findViewById(R.id.viewfinder_view);
-    viewfinderView.setCameraManager(cameraManager);
-
-    final TextureView textureView = (TextureView) getView().findViewById(R.id.preview_view);
-    if (hasSurface) {
-      // The activity was paused but not stopped, so the surface still
-      // exists. Therefore
-      // surfaceCreated() won't be called, so init the camera here.
-      initCamera(textureView);
-    } else {
-      // Install the callback and wait for surfaceCreated() to init the
-      // camera.
-
-      callback=new TextureView.SurfaceTextureListener() {
-        @Override
-        public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
-          if (surface == null) {
-            Log.e(TAG, "*** WARNING *** surfaceCreated() gave us a null surface!"); //$NON-NLS-1$
-          }
-          if (!hasSurface) {
-            hasSurface = true;
-            initCamera(textureView);
-          }
-        }
-
-        @Override
-        public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
-        }
-
-        @Override
-        public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
-          hasSurface = false;
-          return true;
-        }
-
-        @Override
-        public void onSurfaceTextureUpdated(SurfaceTexture surface) {
-
-        }
-      };
-
-      textureView.setSurfaceTextureListener(callback);
-    }
   }
 
-  @Override
+    public void resumeCamera() {
+        if(paused &&isResumed()) {
+            // Setup camera view
+            Context context = getActivity().getApplication();
+            cameraManager = new CameraManager(new CameraConfigurationManager(context));
+            cameraManager.setManualFramingRect(getView().getWidth(), getView().getHeight());
+            cameraManager.setCameraDisplayOrientation(getActivity().getWindowManager().getDefaultDisplay().getRotation());
+
+            viewfinderView = (ViewfinderView) getView().findViewById(R.id.viewfinder_view);
+            viewfinderView.setCameraManager(cameraManager);
+
+            final TextureView textureView = (TextureView) getView().findViewById(R.id.preview_view);
+            if (hasSurface) {
+                // The activity was paused but not stopped, so the surface still
+                // exists. Therefore
+                // surfaceCreated() won't be called, so init the camera here.
+                initCamera(textureView);
+            } else {
+                // Install the callback and wait for surfaceCreated() to init the
+                // camera.
+
+                callback = new TextureView.SurfaceTextureListener() {
+                    @Override
+                    public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
+                        if (surface == null) {
+                            Log.e(TAG, "*** WARNING *** surfaceCreated() gave us a null surface!"); //$NON-NLS-1$
+                        }
+                        if (!hasSurface) {
+                            hasSurface = true;
+                            initCamera(textureView);
+                        }
+                    }
+
+                    @Override
+                    public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
+                    }
+
+                    @Override
+                    public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
+                        hasSurface = false;
+                        return true;
+                    }
+
+                    @Override
+                    public void onSurfaceTextureUpdated(SurfaceTexture surface) {
+
+                    }
+                };
+
+                textureView.setSurfaceTextureListener(callback);
+            }
+            paused = false;
+        }
+    }
+
+    @Override
   public void onPause() {
-    if (handler != null) {
-      handler.quitSynchronously();
-      handler = null;
-    }
-    // inactivityTimer.onPause();
-    // ambientLightManager.stop();
-    cameraManager.closeDriver();
-    if (!hasSurface) {
-      TextureView view = (TextureView) getView().findViewById(R.id.preview_view);
-      view.setSurfaceTextureListener(null);
-    }
+        pauseCamera();
     super.onPause();
   }
 
-  private void initCamera(TextureView textureView) {
+    public void pauseCamera() {
+        if(!paused) {
+            if (handler != null) {
+                handler.quitSynchronously();
+                handler = null;
+            }
+            // inactivityTimer.onPause();
+            // ambientLightManager.stop();
+            cameraManager.closeDriver();
+            if (!hasSurface) {
+                TextureView view = (TextureView) getView().findViewById(R.id.preview_view);
+                view.setSurfaceTextureListener(null);
+            }
+            paused = true;
+        }
+    }
+
+    private void initCamera(TextureView textureView) {
     if (textureView == null) {
       throw new IllegalStateException("No TextureView provided"); //$NON-NLS-1$
     }
@@ -237,4 +252,8 @@ public class ZXingFragment extends Fragment {
     handler.sendEmptyMessageDelayed(R.id.restart_preview, millis);
   }
 
+    public void setTorch(boolean newSetting) {
+        if(cameraManager != null)
+            cameraManager.setTorch(newSetting);
+    }
 }
