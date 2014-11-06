@@ -21,7 +21,7 @@ public class FragmentHandler extends Handler {
 	private State state;
 	private final CameraManager cameraManager;
 	private final ZXingFragment fragment;
-	
+	private long failedCount = 1000;
 	public FragmentHandler(ZXingFragment fragment,
 			Collection<BarcodeFormat> decodeFormats,
             String characterSet,
@@ -37,7 +37,6 @@ public class FragmentHandler extends Handler {
 		cameraManager.startPreview();
 		restartPreviewAndDecode();
 	}
-
 	private enum State {
 		PREVIEW, SUCCESS, ConnectionResult, DONE
 	}
@@ -65,13 +64,22 @@ public class FragmentHandler extends Handler {
 				scaleFactor = bundle
 						.getFloat(DecodeThread.BARCODE_SCALED_FACTOR);
 			}
-			fragment.handleDecode((Result) message.obj, barcode, scaleFactor);
+            if(failedCount > 4) {
+                fragment.handleDecode((Result) message.obj, barcode, scaleFactor);
+            } else {
+                state = State.PREVIEW;
+                cameraManager.requestPreviewFrame(decodeThread.getHandler(),
+                        R.id.decode);
+            }
+            failedCount = 0;
 		} else if (message.what == R.id.decode_failed) {
 			// We're decoding as fast as possible, so when one decode fails,
 			// start another.
 			state = State.PREVIEW;
 			cameraManager.requestPreviewFrame(decodeThread.getHandler(),
 					R.id.decode);
+            failedCount++;
+            Log.v(TAG, "failed");
 		}
 	}
 
