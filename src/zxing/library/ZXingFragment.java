@@ -47,13 +47,13 @@ public class ZXingFragment extends Fragment implements SurfaceHolder.Callback {
 		Window window = getActivity().getWindow();
 		window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-		hasSurface = false;
-	}
+        hasSurface = false;
+    }
 
 	@SuppressWarnings("deprecation")
 	@Override
 	public void onResume() {
-		super.onResume();
+        super.onResume();
         resumeCamera();
     }
 
