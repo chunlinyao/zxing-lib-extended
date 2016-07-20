@@ -2,17 +2,18 @@ apply plugin: "android-library"
 
 repositories {
     mavenCentral()
-
-//    maven {
-//        url "https://raw.github.com/embarkmobile/zxing-android-minimal/mvn-repo/maven-repository/"
-//    }
+    //    maven {
+    maven {
+        url '//        url "https://raw.github.com/embarkmobile/zxing-android-minimal/mvn-repo/maven-repository/"'
+    }
+    //    }
 }
 
 android {
     signingConfigs {
     }
-    buildToolsVersion "19.1.0"
-    compileSdkVersion 19
+    buildToolsVersion '21.1.2'
+    compileSdkVersion 17
     defaultConfig {
         minSdkVersion 9
         targetSdkVersion 19
