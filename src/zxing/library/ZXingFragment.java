@@ -70,6 +70,7 @@ public class ZXingFragment extends Fragment implements SurfaceHolder.Callback {
 
             SurfaceView surfaceView = (SurfaceView) getView().findViewById(
                     R.id.preview_view);
+			surfaceView.setVisibility(View.VISIBLE);
             SurfaceHolder surfaceHolder = surfaceView.getHolder();
             if (hasSurface) {
                 // The activity was paused but not stopped, so the surface still
@@ -107,6 +108,8 @@ public class ZXingFragment extends Fragment implements SurfaceHolder.Callback {
                 SurfaceHolder surfaceHolder = surfaceView.getHolder();
                 surfaceHolder.removeCallback(this);
             }
+			getView().findViewById(
+					R.id.preview_view).setVisibility(View.GONE);
             paused = true;
         }
     }
