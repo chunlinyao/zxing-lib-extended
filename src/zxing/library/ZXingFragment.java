@@ -59,6 +59,8 @@ public class ZXingFragment extends Fragment implements SurfaceHolder.Callback {
 
     public void resumeCamera() {
         if(paused && isResumed()) {
+			getView().findViewById(
+					R.id.preview_view).setVisibility(View.VISIBLE);
             // Setup camera view
             cameraManager = new CameraManager(getActivity());
             //setManualFramingRect没有效果
@@ -70,7 +72,6 @@ public class ZXingFragment extends Fragment implements SurfaceHolder.Callback {
 
             SurfaceView surfaceView = (SurfaceView) getView().findViewById(
                     R.id.preview_view);
-			surfaceView.setVisibility(View.VISIBLE);
             SurfaceHolder surfaceHolder = surfaceView.getHolder();
             if (hasSurface) {
                 // The activity was paused but not stopped, so the surface still
@@ -105,11 +106,10 @@ public class ZXingFragment extends Fragment implements SurfaceHolder.Callback {
             if (!hasSurface) {
                 SurfaceView surfaceView = (SurfaceView) getView().findViewById(
                         R.id.preview_view);
+				surfaceView.setVisibility(View.GONE);
                 SurfaceHolder surfaceHolder = surfaceView.getHolder();
                 surfaceHolder.removeCallback(this);
             }
-			getView().findViewById(
-					R.id.preview_view).setVisibility(View.GONE);
             paused = true;
         }
     }
